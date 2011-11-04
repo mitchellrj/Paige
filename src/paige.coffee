@@ -23,7 +23,7 @@ configuration = {
 # Read our configuration file.
 read_config = (callback) ->
   filename = "paige.config"
-  filename = process.ARGV[2] if process.ARGV[2]?
+  filename = process.argv[2] if process.argv[2]?
   fs.readFile filename, "utf-8", (error, data) ->
     if error
       console.log "\nCould not find a configuration file. (default: ./paige.config)"
@@ -43,8 +43,24 @@ process_config = (config={}) ->
 
 # Ensure that the destination directory exists.
 ensure_directory = (dir, callback) ->
-  exec "mkdir -p #{dir}", -> callback()
-
+  mkdirp = (base, path_stack, callback) ->
+    return callback() unless path_stack.length
+    d = path_stack.shift()
+    p = path.join base, d
+    path.exists p, (exists) ->
+      if exists
+        fs.stat p, (error, stat) ->
+          console.log "Couldn't stat #{p}." if error?
+          console.log "#{p} exists but is not a directory." unless stat.isDirectory()
+          mkdirp p, path_stack, callback if stat.isDirectory()
+      else
+        fs.mkdir p, 0755, (error) ->
+          console.log "Could not create directory #{p}." if error?
+          mkdirp p, path_stack, callback unless error?
+  
+  dir = path.normalize dir
+  sep = path.join('a', 'b')[1];
+  mkdirp path.normalize('.'), dir.split(sep), callback
 
 # ...
 copy_image = ->
